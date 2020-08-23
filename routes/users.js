@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const User = require('../models/User');
+const key = require('../config/dbconfig');
+const { token } = require('morgan');
 
 router.get('/', (req, res) => {
     res.send('hello');
@@ -35,5 +38,48 @@ router.post('/register', (req, res) => {
 
     })
 });
+
+//@route POST /login
+router.post('/login', (req, res) => {
+    const email = req.body.email;
+    const password = req.body.password;
+    //Find user by email
+    User.findOne({ email })
+
+    //check user
+    .then(user => {
+        if (!user) {
+
+            return res.status(404).json();
+        }
+        //console.log(email);
+        //check match password
+        console.log("password");
+        console.log(user.password);
+        bcrypt.compare(password, user.password)
+            .then(isMatch => {
+                if (isMatch) {
+                    //res.json({ msg: 'Success' });
+                    //user matched
+                    const payload = { id: user.id, name: user.name, email: user.email }
+                        //sign token
+
+                    jwt.sign(payload, key.secret, { expiresIn: 3600 }, (err, token) => {
+                        res.json({
+                            success: true,
+                            token: 'Bearer ' + token
+                        });
+                    });
+
+
+                } else {
+                    console.log('dont match');
+                    return res.status(404).json();
+                }
+            });
+
+    });
+});
+
 
 module.exports = router;
